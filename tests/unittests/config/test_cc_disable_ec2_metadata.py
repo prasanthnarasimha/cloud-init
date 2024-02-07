@@ -23,10 +23,17 @@ class TestEC2MetadataRoute(CiTestCase):
         """Set the route if ifconfig command is available"""
         m_which.side_effect = lambda x: x if x == "ifconfig" else None
         ec2_meta.handle("foo", DISABLE_CFG, None, None)
-        m_subp.assert_called_with(
-            ["route", "add", "-host", "169.254.169.254", "reject"],
-            capture=False,
-        )
+        REJECT_CMDS_IF = [
+            mock.call(
+                ["route", "add", "-host", "169.254.169.254", "reject"],
+                capture=False,
+            ),
+            mock.call(
+                ["route", "-6", "add", "-host", "fd00:ec2::254", "reject"],
+                capture=False,
+            ),
+        ]
+        m_subp.assert_has_calls(REJECT_CMDS_IF, any_order=False)
 
     @mock.patch("cloudinit.config.cc_disable_ec2_metadata.subp.which")
     @mock.patch("cloudinit.config.cc_disable_ec2_metadata.subp.subp")
@@ -34,10 +41,17 @@ class TestEC2MetadataRoute(CiTestCase):
         """Set the route if ip command is available"""
         m_which.side_effect = lambda x: x if x == "ip" else None
         ec2_meta.handle("foo", DISABLE_CFG, None, None)
-        m_subp.assert_called_with(
-            ["ip", "route", "add", "prohibit", "169.254.169.254"],
-            capture=False,
-        )
+        REJECT_CMDS_IP = [
+            mock.call(
+                ["ip", "route", "add", "prohibit", "169.254.169.254"],
+                capture=False,
+            ),
+            mock.call(
+                ["ip", "-6", "route", "add", "prohibit", "fd00:ec2::254"],
+                capture=False,
+            ),
+        ]
+        m_subp.assert_has_calls(REJECT_CMDS_IP, any_order=False)
 
     @mock.patch("cloudinit.config.cc_disable_ec2_metadata.subp.which")
     @mock.patch("cloudinit.config.cc_disable_ec2_metadata.subp.subp")

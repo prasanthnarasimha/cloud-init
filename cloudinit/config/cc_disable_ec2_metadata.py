@@ -18,8 +18,14 @@ from cloudinit.config.schema import MetaSchema, get_meta_doc
 from cloudinit.distros import ALL_DISTROS
 from cloudinit.settings import PER_ALWAYS
 
-REJECT_CMD_IF = ["route", "add", "-host", "169.254.169.254", "reject"]
-REJECT_CMD_IP = ["ip", "route", "add", "prohibit", "169.254.169.254"]
+REJECT_CMDS_IF = [
+    ["route", "add", "-host", "169.254.169.254", "reject"],
+    ["route", "-6", "add", "-host", "fd00:ec2::254", "reject"],
+]
+REJECT_CMDS_IP = [
+    ["ip", "route", "add", "prohibit", "169.254.169.254"],
+    ["ip", "-6", "route", "add", "prohibit", "fd00:ec2::254"],
+]
 
 LOG = logging.getLogger(__name__)
 
@@ -29,9 +35,10 @@ meta: MetaSchema = {
     "title": "Disable AWS EC2 Metadata",
     "description": dedent(
         """\
-        This module can disable the ec2 datasource by rejecting the route to
-        ``169.254.169.254``, the usual route to the datasource. This module
-        is disabled by default."""
+        This module can disable the ec2 datasource by rejecting the routes to
+        IPv4 metadata URL ``169.254.169.254`` and
+        IPv6 metadata URL ``fd00:ec2::254``, the usual route to the datasource.
+        This module is disabled by default."""
     ),
     "distros": [ALL_DISTROS],
     "frequency": PER_ALWAYS,
@@ -45,18 +52,19 @@ __doc__ = get_meta_doc(meta)
 def handle(name: str, cfg: Config, cloud: Cloud, args: list) -> None:
     disabled = util.get_cfg_option_bool(cfg, "disable_ec2_metadata", False)
     if disabled:
-        reject_cmd = None
+        reject_cmds = []
         if subp.which("ip"):
-            reject_cmd = REJECT_CMD_IP
+            reject_cmds = REJECT_CMDS_IP
         elif subp.which("ifconfig"):
-            reject_cmd = REJECT_CMD_IF
+            reject_cmds = REJECT_CMDS_IF
         else:
             LOG.error(
                 'Neither "route" nor "ip" command found, unable to '
                 "manipulate routing table"
             )
             return
-        subp.subp(reject_cmd, capture=False)
+        for reject_cmd in reject_cmds:
+            subp.subp(reject_cmd, capture=False)
     else:
         LOG.debug(
             "Skipping module named %s, disabling the ec2 route not enabled",

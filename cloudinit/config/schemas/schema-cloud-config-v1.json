@@ -1177,7 +1177,7 @@
       "properties": {
         "disable_ec2_metadata": {
           "default": false,
-          "description": "Set true to disable IPv4 routes to EC2 metadata. Default: ``false``",
+          "description": "Set true to disable IPv4 and IPv6 routes to EC2 metadata. Default: ``false``",
           "type": "boolean"
         }
       }
